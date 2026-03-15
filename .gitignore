@@ -1,0 +1,40 @@
+# ─── 개발용 AI 지시 파일 ───
+GEMINI.md
+AGENTS.md
+CONTEXT.md
+redesign.md
+ManseiGraph_project_plan.md
+CLAUDE.md
+
+# ─── 환경 변수 / 민감 정보 ───
+.env
+.env.*
+*.key
+*.pem
+credentials*
+
+# ─── 개발 로그 ───
+logs/
+
+# ─── Python ───
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# ─── Node.js ───
+frontend/node_modules/
+frontend/dist/
+
+# ─── OS ───
+.DS_Store
+Thumbs.db
+
+# ─── IDE ───
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── 파이프라인 마커 ───
+data/output/.dedup_done

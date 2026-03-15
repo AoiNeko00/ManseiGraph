@@ -1,0 +1,61 @@
+
+-Target activity-
+You are an intelligent assistant that helps a human analyst to analyze historical claims against certain entities presented in a text document about the Korean independence movement (한국 독립운동).
+
+-Goal-
+Given a text document that is potentially relevant to this activity, an entity specification, and a claim description, extract all entities that match the entity specification and all claims against those entities.
+
+-Domain-Specific Rules-
+1. **Historical Context:** Claims should be evaluated in the context of the independence movement period (1894-1945). A "claim" may include historical acts (의거, 투쟁), organizational roles, ideological positions, and diplomatic activities.
+2. **Canonical Names:** Use full Korean names (e.g., "김구" not "김"). Note aliases/pen names in descriptions.
+3. **Verification Status:** For historical events, use TRUE for well-documented facts, SUSPECTED for disputed claims, and FALSE for debunked claims.
+
+-Steps-
+1. Extract all named entities that match the predefined entity specification. Entity specification can either be a list of entity names or a list of entity types.
+2. For each entity identified in step 1, extract all claims associated with the entity. Claims need to match the specified claim description, and the entity should be the subject of the claim.
+For each claim, extract the following information:
+- Subject: name of the entity that is subject of the claim, capitalized. The subject entity is one that committed the action described in the claim. Subject needs to be one of the named entities identified in step 1.
+- Object: name of the entity that is object of the claim, capitalized. The object entity is one that either reports/handles or is affected by the action described in the claim. If object entity is unknown, use **NONE**.
+- Claim Type: overall category of the claim, capitalized. Name it in a way that can be repeated across multiple text inputs, so that similar claims share the same claim type
+- Claim Status: **TRUE**, **FALSE**, or **SUSPECTED**. TRUE means the claim is confirmed, FALSE means the claim is found to be False, SUSPECTED means the claim is not verified.
+- Claim Description: Detailed description explaining the reasoning behind the claim, together with all the related evidence and references.
+- Claim Date: Period (start_date, end_date) when the claim was made. Both start_date and end_date should be in ISO-8601 format. If the claim was made on a single date rather than a date range, set the same date for both start_date and end_date. If date is unknown, return **NONE**.
+- Claim Source Text: List of **all** quotes from the original text that are relevant to the claim.
+
+Format each claim as (<subject_entity><|><object_entity><|><claim_type><|><claim_status><|><claim_start_date><|><claim_end_date><|><claim_description><|><claim_source>)
+
+3. Return output in Korean as a single list of all the claims identified in steps 1 and 2. Use **##** as the list delimiter.
+
+4. When finished, output <|COMPLETE|>
+
+-Examples-
+Example 1:
+Entity specification: person
+Claim description: historical acts and roles associated with an entity
+Text: 안중근은 1909년 10월 26일 하얼빈역에서 초대 조선통감 이토 히로부미를 저격하여 처단했다. 거사 후 뤼순 감옥에 수감되어 1910년 3월 26일 사형이 집행되었다. 안중근은 옥중에서 《동양평화론》을 집필하여 한·중·일 평화공존을 제안했다.
+Output:
+
+(안중근<|>이토 히로부미<|>항일 의거<|>TRUE<|>1909-10-26T00:00:00<|>1909-10-26T00:00:00<|>안중근은 1909년 10월 26일 하얼빈역에서 초대 조선통감 이토 히로부미를 저격하여 처단했다<|>안중근은 1909년 10월 26일 하얼빈역에서 초대 조선통감 이토 히로부미를 저격하여 처단했다.)
+##
+(안중근<|>NONE<|>사상적 저술<|>TRUE<|>1909-10-26T00:00:00<|>1910-03-26T00:00:00<|>안중근은 뤼순 감옥에서 《동양평화론》을 집필하여 한·중·일 평화공존 체계를 제안했다<|>안중근은 옥중에서 《동양평화론》을 집필하여 한·중·일 평화공존을 제안했다.)
+<|COMPLETE|>
+
+Example 2:
+Entity specification: 김구, 윤봉길
+Claim description: historical acts and roles associated with an entity
+Text: 김구는 한인애국단을 조직하여 항일 의거를 지도했다. 1932년 4월 29일 윤봉길은 김구의 지시로 상하이 훙커우공원에서 열린 일왕 생일 기념식장에 폭탄을 투척하여 일본군 장성 시라카와 대장을 사살했다. 이 의거로 중국 국민당 장제스가 한국 독립운동에 대한 지원을 결정했다.
+Output:
+
+(김구<|>한인애국단<|>조직 창설<|>TRUE<|>1931-01-01T00:00:00<|>1932-12-31T00:00:00<|>김구는 한인애국단을 조직하여 항일 의거를 체계적으로 지도했다<|>김구는 한인애국단을 조직하여 항일 의거를 지도했다.)
+##
+(윤봉길<|>시라카와 대장<|>항일 의거<|>TRUE<|>1932-04-29T00:00:00<|>1932-04-29T00:00:00<|>윤봉길은 1932년 4월 29일 상하이 훙커우공원에서 일왕 생일 기념식장에 폭탄을 투척하여 일본군 장성 시라카와 대장을 사살했다<|>1932년 4월 29일 윤봉길은 김구의 지시로 상하이 훙커우공원에서 열린 일왕 생일 기념식장에 폭탄을 투척하여 일본군 장성 시라카와 대장을 사살했다.)
+##
+(윤봉길<|>장제스<|>외교적 영향<|>TRUE<|>1932-04-29T00:00:00<|>1932-12-31T00:00:00<|>윤봉길의 의거는 중국 국민당 장제스가 한국 독립운동 지원을 결정하는 계기가 되었다<|>이 의거로 중국 국민당 장제스가 한국 독립운동에 대한 지원을 결정했다.)
+<|COMPLETE|>
+
+-Real Data-
+Use the following input for your answer.
+Entity specification: {entity_specs}
+Claim description: {claim_description}
+Text: {input_text}
+Output:

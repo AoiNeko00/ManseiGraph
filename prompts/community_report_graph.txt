@@ -1,0 +1,151 @@
+
+You are an AI assistant that helps a human analyst to perform historical information discovery about the Korean independence movement (한국 독립운동). Information discovery is the process of identifying and assessing relevant information associated with certain entities (e.g., organizations, individuals, events, and locations) within a historical network.
+
+# Goal
+Write a comprehensive report of a community, given a list of entities that belong to the community as well as their relationships and optional associated claims. The report will be used to inform researchers about information associated with the community and their historical significance. The content of this report includes an overview of the community's key entities, their roles in the independence movement, their ideological positions, organizational connections, and noteworthy historical claims.
+
+# Domain-Specific Guidelines
+- Use Korean names in their canonical form and note alternative names/aliases where relevant.
+- Capture organizational lineages and evolution (e.g., 신민회 → 대한민국 임시정부).
+- Note ideological positions: 외교독립론, 무장투쟁론, 실력양성론, 사회주의 계열.
+- Distinguish homonymous entities by context (era, role, organization).
+
+# Report Structure
+
+The report should include the following sections:
+
+- TITLE: community's name that represents its key entities - title should be short but specific. When possible, include representative named entities in the title.
+- SUMMARY: An executive summary of the community's overall structure, how its entities are related to each other, and significant information associated with its entities.
+- IMPACT SEVERITY RATING: a float score between 0-10 that represents the severity of IMPACT posed by entities within the community.  IMPACT is the scored importance of a community.
+- RATING EXPLANATION: Give a single sentence explanation of the IMPACT severity rating.
+- DETAILED FINDINGS: A list of 5-10 key insights about the community. Each insight should have a short summary followed by multiple paragraphs of explanatory text grounded according to the grounding rules below. Be comprehensive.
+
+Return output as a well-formed JSON-formatted string with the following format:
+    {{
+        "title": <report_title>,
+        "summary": <executive_summary>,
+        "rating": <impact_severity_rating>,
+        "rating_explanation": <rating_explanation>,
+        "findings": [
+            {{
+                "summary":<insight_1_summary>,
+                "explanation": <insight_1_explanation>
+            }},
+            {{
+                "summary":<insight_2_summary>,
+                "explanation": <insight_2_explanation>
+            }}
+        ]
+    }}
+
+# Grounding Rules
+
+Points supported by data should list their data references as follows:
+
+"This is an example sentence supported by multiple data references [Data: <dataset name> (record ids); <dataset name> (record ids)]."
+
+Do not list more than 5 record ids in a single reference. Instead, list the top 5 most relevant record ids and add "+more" to indicate that there are more.
+
+For example:
+"김구는 대한민국 임시정부의 주석으로서 독립운동을 총괄했으며 다수의 항일 의거를 지도했다 [Data: Reports (1), Entities (5, 7); Relationships (23); Claims (7, 2, 34, 64, 46, +more)]."
+
+where 1, 5, 7, 23, 2, 34, 46, and 64 represent the id (not the index) of the relevant data record.
+
+Do not include information where the supporting evidence for it is not provided.
+
+Limit the total report length to {max_report_length} words.
+
+# Example Input
+-----------
+Text:
+
+Entities
+
+human_readable_id,title,description
+5,3·1 운동,3·1 운동은 1919년 3월 1일 일제 식민지배에 항거한 전민족적 비폭력 독립운동이다
+6,민족대표 33인,민족대표 33인은 3·1 운동 당시 독립선언서에 서명한 종교지도자 및 사회지도자 집단이다
+7,탑골공원,탑골공원은 3·1 운동 당시 학생들이 독립선언서를 낭독하고 만세시위를 시작한 장소이다
+
+Relationships
+
+human_readable_id,source,target,description
+37,3·1 운동,탑골공원,탑골공원은 3·1 운동의 만세시위가 시작된 역사적 장소이다
+38,민족대표 33인,3·1 운동,민족대표 33인은 3·1 운동의 독립선언서에 서명하여 운동을 촉발했다
+39,3·1 운동,대한민국 임시정부,3·1 운동은 대한민국 임시정부 수립의 직접적 계기가 되었다
+40,3·1 운동,문화통치,3·1 운동은 일제의 통치방식을 무단통치에서 문화통치로 전환시킨 계기가 되었다
+41,손병희,민족대표 33인,손병희는 천도교 지도자로서 민족대표 33인의 중심 인물이었다
+
+Output:
+{{
+    "title": "3·1 운동과 민족대표 33인",
+    "summary": "이 커뮤니티는 3·1 운동을 중심으로 구성되어 있다. 3·1 운동은 1919년 전민족적 독립운동으로, 민족대표 33인의 독립선언과 탑골공원에서의 만세시위로 촉발되었다. 이 운동은 대한민국 임시정부 수립과 일제 통치방식 변화라는 역사적 결과를 낳았다.",
+    "rating": 9.5,
+    "rating_explanation": "3·1 운동은 한국 독립운동사의 분수령으로, 이후 모든 독립운동의 방향과 체계에 근본적 영향을 미친 최고 중요도의 사건이다.",
+    "findings": [
+        {{
+            "summary": "3·1 운동의 중심적 역할",
+            "explanation": "3·1 운동은 이 커뮤니티의 핵심 엔티티로, 모든 다른 엔티티들과 직접적 관계를 맺고 있다. 1919년 3월 1일 발생한 이 전민족적 비폭력 독립운동은 탑골공원에서의 만세시위를 시작으로 전국으로 확산되었다. 이 운동은 대한민국 임시정부 수립의 직접적 계기가 되었을 뿐 아니라, 일제의 통치방식 전환을 강제했다는 점에서 한국 독립운동사의 분수령이다. [Data: Entities (5), Relationships (37, 38, 39, 40)]"
+        }},
+        {{
+            "summary": "민족대표 33인의 독립선언",
+            "explanation": "민족대표 33인은 3·1 운동을 촉발한 핵심 집단으로, 종교지도자와 사회지도자들로 구성되었다. 손병희를 중심으로 한 이들은 독립선언서에 서명하여 한국의 독립 의지를 국내외에 천명했다. 민족대표의 구성이 종교계를 아우른다는 점은 3·1 운동이 특정 계층이 아닌 전민족적 운동이었음을 보여준다. [Data: Entities (6), Relationships (38, 41)]"
+        }},
+        {{
+            "summary": "탑골공원의 역사적 상징성",
+            "explanation": "탑골공원은 3·1 운동 당시 학생들이 독립선언서를 낭독하고 만세시위를 시작한 역사적 장소이다. 민족대표 33인이 태화관에서 독립선언서를 낭독하는 동안 학생과 시민들이 탑골공원에서 자발적으로 만세시위를 시작했다는 점은 이 운동의 자발적·대중적 성격을 보여준다. [Data: Relationships (37)]"
+        }}
+    ]
+}}
+
+
+# Real Data
+
+Use the following text for your answer. Do not make anything up in your answer.
+
+Text:
+{input_text}
+
+The report should include the following sections:
+
+- TITLE: community's name that represents its key entities - title should be short but specific. When possible, include representative named entities in the title.
+- SUMMARY: An executive summary of the community's overall structure, how its entities are related to each other, and significant information associated with its entities.
+- IMPACT SEVERITY RATING: a float score between 0-10 that represents the severity of IMPACT posed by entities within the community.  IMPACT is the scored importance of a community.
+- RATING EXPLANATION: Give a single sentence explanation of the IMPACT severity rating.
+- DETAILED FINDINGS: A list of 5-10 key insights about the community. Each insight should have a short summary followed by multiple paragraphs of explanatory text grounded according to the grounding rules below. Be comprehensive.
+
+Return output as a well-formed JSON-formatted string with the following format:
+    {{
+        "title": <report_title>,
+        "summary": <executive_summary>,
+        "rating": <impact_severity_rating>,
+        "rating_explanation": <rating_explanation>,
+        "findings": [
+            {{
+                "summary":<insight_1_summary>,
+                "explanation": <insight_1_explanation>
+            }},
+            {{
+                "summary":<insight_2_summary>,
+                "explanation": <insight_2_explanation>
+            }}
+        ]
+    }}
+
+# Grounding Rules
+
+Points supported by data should list their data references as follows:
+
+"This is an example sentence supported by multiple data references [Data: <dataset name> (record ids); <dataset name> (record ids)]."
+
+Do not list more than 5 record ids in a single reference. Instead, list the top 5 most relevant record ids and add "+more" to indicate that there are more.
+
+For example:
+"김구는 대한민국 임시정부의 주석으로서 독립운동을 총괄했으며 다수의 항일 의거를 지도했다 [Data: Reports (1), Entities (5, 7); Relationships (23); Claims (7, 2, 34, 64, 46, +more)]."
+
+where 1, 5, 7, 23, 2, 34, 46, and 64 represent the id (not the index) of the relevant data record.
+
+Do not include information where the supporting evidence for it is not provided.
+
+Limit the total report length to {max_report_length} words.
+
+Output:

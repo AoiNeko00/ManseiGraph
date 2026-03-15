@@ -1,0 +1,164 @@
+
+-Goal-
+Given a text document that is potentially relevant to this activity and a list of entity types, identify all entities of those types from the text and all relationships among the identified entities.
+
+-Domain-Specific Rules-
+This data covers Korean independence movement history (한국 독립운동사). Apply the following rules:
+
+1. **Homonym Disambiguation (동명이인 분리):**
+   - 반드시 성+이름 전체(FULL NAME)를 사용하라. "김" "이" 등 성만 쓰지 말 것.
+   - 동일 성씨·유사 이름 인물 구분에 주의:
+     - 김구(백범) vs 김규식(우사) — 둘 다 임시정부 핵심이나 역할이 다름
+     - 이승만(외교론) vs 이동휘(사회주의) vs 이회영(아나키즘) — "이" 씨 독립운동가 다수
+     - 김좌진(청산리) vs 김원봉(의열단) — 무장투쟁 계열이나 노선 상이
+   - 동일 텍스트에 같은 성의 인물이 2명 이상 등장하면, 첫 언급 시 "(호: ○○)" 또는 소속 조직을 entity_description에 반드시 병기하라.
+   - 모호한 대명사("그", "그녀", "장군")는 반드시 실명으로 치환하여 추출하라.
+
+2. **Symbolic Figure Relationships (상징적 인물·사건의 관계 강조):**
+   - 독립운동사의 핵심 인물(김구, 안창호, 안중근, 유관순, 윤봉길 등)은 단순 소속 관계를 넘어 **사상적 영향, 계승 관계, 대립 구도**까지 포착하라.
+   - 예: 김구가 의열단 활동에 고무되어 한인애국단을 조직한 관계, 신채호가 이승만의 외교론을 비판하고 무장투쟁론을 제시한 관계.
+   - 상징적 사건(3·1 운동, 청산리 전투, 하얼빈 의거 등)이 후속 조직/인물에 미친 영향도 relationship으로 추출하라.
+   - relationship_strength 기준: 직접 행위(의거 수행, 조직 창설)=9~10, 사상적 영향/계승=7~8, 간접 관련=5~6.
+
+3. **Alternative Names (이명/호):** Many figures have pen names (호), courtesy names, or aliases (e.g., 김구 = 백범, 안창호 = 도산, 신채호 = 단재, 김원봉 = 약산, 김좌진 = 백야). When the text uses an alternative name, map it to the canonical name and note the alias in the description. 절대 호(號)를 별도 엔티티로 분리하지 말 것.
+
+4. **Organization Evolution (조직 변천):** Independence movement organizations frequently merged, split, or evolved. 주요 계보:
+   - 의열단 → 조선민족혁명당 → 조선의용대 → (일부) 한국광복군 합류
+   - 신민회 → 서간도·북간도 독립군 기지 → 북로군정서·서로군정서
+   - 대한광복단 → 대한정의단 → 군정부 → 북로군정서
+   이러한 전환을 "EVOLVED_INTO", "MERGED_WITH", "SPLIT_FROM" 등의 의미를 relationship_description에 명시하라.
+
+5. **Date Precision:** Extract specific dates when available (e.g., 1909-10-26 for 안중근 의거). Include dates in entity and relationship descriptions.
+
+6. **Colonial Context:** Entities related to Japanese colonial rule (조선총독부, 동양척식주식회사, etc.) should be typed appropriately and their oppressive role noted in descriptions.
+
+7. **Cross-Document Entity Consistency (문서 간 엔티티 일관성):**
+   - 동일 인물·조직은 항상 동일한 entity_name을 사용하라. 예: "대한민국 임시정부" (O) vs "임시정부" (X) vs "임정" (X).
+   - 정식 명칭 기준: 대한민국 임시정부, 한국광복군, 조선총독부, 동양척식주식회사.
+
+8. **Ideological Lines (사상 노선 구분):**
+   - 외교독립론(이승만), 무장투쟁론(김원봉, 김좌진), 실력양성론(안창호), 사회주의(이동휘) 등 노선 차이를 relationship_description에 반영하라.
+   - 노선 간 협력·갈등·전환도 관계로 추출하라.
+
+-Steps-
+1. Identify all entities. For each identified entity, extract the following information:
+- entity_name: Name of the entity, capitalized
+- entity_type: One of the following types: [{entity_types}]
+- entity_description: Comprehensive description of the entity's attributes and activities
+Format each entity as ("entity"<|><entity_name><|><entity_type><|><entity_description>)
+
+2. From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are *clearly related* to each other.
+For each pair of related entities, extract the following information:
+- source_entity: name of the source entity, as identified in step 1
+- target_entity: name of the target entity, as identified in step 1
+- relationship_description: explanation as to why you think the source entity and the target entity are related to each other
+- relationship_strength: a numeric score indicating strength of the relationship between the source entity and target entity
+ Format each relationship as ("relationship"<|><source_entity><|><target_entity><|><relationship_description><|><relationship_strength>)
+
+3. Return output in Korean as a single list of all the entities and relationships identified in steps 1 and 2. Use **##** as the list delimiter.
+
+4. When finished, output <|COMPLETE|>
+
+######################
+-Examples-
+######################
+Example 1:
+Entity_types: ORGANIZATION,PERSON
+Text:
+대한민국 임시정부는 1919년 4월 11일 중국 상하이에서 수립되었다. 초대 국무령은 이승만이었으며, 김구는 1940년대 임시정부 주석으로서 한국광복군을 창설하고 대일 항전을 지휘했다. 임시정부는 충칭으로 이전한 뒤 광복군을 통해 연합군과 협력하였다.
+######################
+Output:
+("entity"<|>대한민국 임시정부<|>ORGANIZATION<|>대한민국 임시정부는 1919년 4월 11일 중국 상하이에서 수립된 한국 독립운동의 최고 지도기관으로, 이후 충칭으로 이전하여 광복까지 활동했다)
+##
+("entity"<|>이승만<|>PERSON<|>이승만은 대한민국 임시정부의 초대 국무령(대통령)으로, 외교 독립론을 주도한 독립운동가이다)
+##
+("entity"<|>김구<|>PERSON<|>김구(호: 백범)는 1940년대 대한민국 임시정부 주석으로서 한국광복군을 창설하고 대일 항전을 지휘한 독립운동 지도자이다)
+##
+("entity"<|>한국광복군<|>ORGANIZATION<|>한국광복군은 대한민국 임시정부 산하 군사조직으로, 연합군과 협력하여 대일 항전을 수행했다)
+##
+("relationship"<|>김구<|>대한민국 임시정부<|>김구는 1940년대 임시정부 주석으로서 조직을 이끌었다<|>10)
+##
+("relationship"<|>이승만<|>대한민국 임시정부<|>이승만은 임시정부의 초대 국무령이었다<|>8)
+##
+("relationship"<|>대한민국 임시정부<|>한국광복군<|>임시정부는 한국광복군을 산하 군사조직으로 창설하여 대일 항전을 수행했다<|>9)
+##
+("relationship"<|>김구<|>한국광복군<|>김구는 임시정부 주석으로서 한국광복군 창설을 주도했다<|>9)
+<|COMPLETE|>
+
+######################
+Example 2:
+Entity_types: ORGANIZATION,PERSON,EVENT
+Text:
+의열단은 1919년 11월 김원봉을 단장으로 만주 지린에서 창립된 무장 독립운동 단체이다. 신채호가 작성한 《조선혁명선언》을 행동강령으로 삼았다. 1920년 박재혁은 부산경찰서에 폭탄을 투척했고, 1926년 나석주는 동양척식주식회사를 습격하여 일제 경제 수탈의 상징을 공격했다.
+######################
+Output:
+("entity"<|>의열단<|>ORGANIZATION<|>의열단은 1919년 11월 만주 지린에서 창립된 무장 독립운동 단체로, 일제 식민 기관에 대한 직접적 무력 투쟁을 전개했다)
+##
+("entity"<|>김원봉<|>PERSON<|>김원봉(호: 약산)은 의열단의 창립자이자 단장으로, 무장 독립운동을 주도한 혁명가이다)
+##
+("entity"<|>신채호<|>PERSON<|>신채호(호: 단재)는 역사학자이자 독립운동가로, 의열단의 행동강령인 《조선혁명선언》을 작성했다)
+##
+("entity"<|>박재혁<|>PERSON<|>박재혁은 의열단원으로, 1920년 부산경찰서에 폭탄을 투척한 의거를 수행했다)
+##
+("entity"<|>나석주<|>PERSON<|>나석주는 1926년 동양척식주식회사를 습격하여 일제 경제 수탈의 상징을 공격한 의열단원이다)
+##
+("entity"<|>동양척식주식회사<|>ORGANIZATION<|>동양척식주식회사는 일제가 한국의 토지와 자원을 수탈하기 위해 설립한 식민 경제기관이다)
+##
+("entity"<|>부산경찰서 폭탄 투척<|>EVENT<|>1920년 의열단원 박재혁이 부산경찰서에 폭탄을 투척한 항일 의거이다)
+##
+("entity"<|>동양척식주식회사 습격<|>EVENT<|>1926년 나석주가 동양척식주식회사를 습격하여 일제 경제 수탈 기관을 공격한 의거이다)
+##
+("relationship"<|>김원봉<|>의열단<|>김원봉은 의열단의 창립자이자 단장이다<|>10)
+##
+("relationship"<|>신채호<|>의열단<|>신채호는 의열단의 행동강령인 《조선혁명선언》을 작성했다<|>8)
+##
+("relationship"<|>박재혁<|>의열단<|>박재혁은 의열단원으로서 부산경찰서 폭탄 투척 의거를 수행했다<|>9)
+##
+("relationship"<|>나석주<|>의열단<|>나석주는 의열단원으로서 동양척식주식회사 습격 의거를 수행했다<|>9)
+##
+("relationship"<|>나석주<|>동양척식주식회사<|>나석주는 1926년 동양척식주식회사를 습격하여 일제 경제 수탈 기관을 공격했다<|>9)
+##
+("relationship"<|>박재혁<|>부산경찰서 폭탄 투척<|>박재혁이 1920년 부산경찰서 폭탄 투척 의거를 직접 수행했다<|>10)
+##
+("relationship"<|>나석주<|>동양척식주식회사 습격<|>나석주가 1926년 동양척식주식회사 습격 의거를 직접 수행했다<|>10)
+<|COMPLETE|>
+
+######################
+Example 3:
+Entity_types: ORGANIZATION,GEO,PERSON,EVENT
+Text:
+안중근은 1909년 10월 26일 만주 하얼빈역에서 초대 조선통감 이토 히로부미를 저격하여 처단했다. 안중근은 연해주에서 대한의군 참모중장으로 활동하며 국내 진공작전을 펼친 바 있다. 거사 후 뤼순 감옥에 수감되어 1910년 3월 26일 사형이 집행되었다. 옥중에서 미완의 《동양평화론》을 집필하여 한·중·일 평화공존을 제안했다.
+######################
+Output:
+("entity"<|>안중근<|>PERSON<|>안중근은 대한제국의 독립운동가로, 1909년 10월 26일 하얼빈에서 이토 히로부미를 저격하고, 옥중에서 《동양평화론》을 집필한 의사이다)
+##
+("entity"<|>이토 히로부미<|>PERSON<|>이토 히로부미는 초대 조선통감으로, 을사조약 체결을 주도하여 한국의 국권을 침탈한 일본 정치인이다)
+##
+("entity"<|>하얼빈<|>GEO<|>하얼빈은 만주에 위치한 도시로, 1909년 안중근 의거가 발생한 장소이다)
+##
+("entity"<|>뤼순 감옥<|>GEO<|>뤼순 감옥은 만주 뤼순에 위치한 일제 감옥으로, 안중근이 수감되어 사형이 집행된 곳이다)
+##
+("entity"<|>대한의군<|>ORGANIZATION<|>대한의군은 연해주에서 활동한 한국 독립군 조직으로, 안중근이 참모중장으로 국내 진공작전을 수행했다)
+##
+("entity"<|>하얼빈 의거<|>EVENT<|>1909년 10월 26일 안중근이 하얼빈역에서 이토 히로부미를 저격·처단한 독립운동 사건이다)
+##
+("relationship"<|>안중근<|>이토 히로부미<|>안중근은 1909년 10월 26일 하얼빈역에서 이토 히로부미를 저격하여 처단했다<|>10)
+##
+("relationship"<|>안중근<|>하얼빈<|>안중근은 하얼빈역에서 이토 히로부미 저격 의거를 수행했다<|>9)
+##
+("relationship"<|>안중근<|>뤼순 감옥<|>안중근은 거사 후 뤼순 감옥에 수감되어 1910년 3월 26일 사형이 집행되었다<|>8)
+##
+("relationship"<|>안중근<|>대한의군<|>안중근은 대한의군 참모중장으로 연해주에서 활동하며 국내 진공작전을 펼쳤다<|>8)
+##
+("relationship"<|>안중근<|>하얼빈 의거<|>안중근이 하얼빈 의거를 직접 수행하여 이토 히로부미를 처단했다<|>10)
+##
+("relationship"<|>하얼빈 의거<|>하얼빈<|>하얼빈 의거는 하얼빈역에서 발생한 사건이다<|>7)
+<|COMPLETE|>
+
+######################
+-Real Data-
+######################
+Entity_types: {entity_types}
+Text: {input_text}
+######################
+Output:
