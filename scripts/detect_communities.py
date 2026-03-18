@@ -176,6 +176,55 @@ def _report_match_rate(
               f"({dominant_count}/{matched_count}개가 Leiden #{dominant_idx}에 집중)")
 
 
+def _build_hierarchy_links(levels: list[dict]) -> None:
+    """레벨 간 포함 관계(parent-child)를 매핑하여 각 커뮤니티에 children/parent 필드를 추가한다.
+
+    하위 레벨 커뮤니티의 노드 집합이 상위 레벨 커뮤니티에 가장 많이 겹치는 쪽을 parent로 지정한다.
+    """
+    for i in range(len(levels) - 1):
+        parent_level = levels[i]
+        child_level = levels[i + 1]
+
+        # 상위 커뮤니티별 노드 집합
+        parent_node_sets = {}
+        for comm in parent_level["communities"]:
+            parent_node_sets[comm["id"]] = set(comm.get("node_ids", []))
+
+        # 하위 커뮤니티별 parent 매핑
+        for child_comm in child_level["communities"]:
+            child_nodes = set(child_comm.get("node_ids", []))
+            if not child_nodes:
+                continue
+
+            best_parent = None
+            best_overlap = 0
+            for parent_id, parent_nodes in parent_node_sets.items():
+                overlap = len(child_nodes & parent_nodes)
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_parent = parent_id
+
+            child_comm["parent_community_id"] = best_parent
+
+        # 상위 커뮤니티에 children 리스트 추가
+        for parent_comm in parent_level["communities"]:
+            parent_comm["children"] = [
+                c["id"] for c in child_level["communities"]
+                if c.get("parent_community_id") == parent_comm["id"]
+            ]
+
+    print(f"\n계층 포함 관계 매핑 완료:")
+    for level_data in levels:
+        level = level_data["level"]
+        for comm in level_data["communities"]:
+            children = comm.get("children", [])
+            parent = comm.get("parent_community_id", "")
+            if children:
+                print(f"  L{level} {comm['name']} → children: {len(children)}개")
+            elif parent:
+                print(f"  L{level} {comm['name']} → parent: {parent}")
+
+
 def run_hierarchical_detection(
     resolutions: list[float] | None = None,
 ) -> dict:
@@ -234,6 +283,9 @@ def run_hierarchical_detection(
         # resolution=1.0에 가장 가까운 레벨을 기본 레벨로 사용
         if res == 1.0 or (primary_result is None and level_idx == len(resolutions) - 1):
             primary_result = level_data
+
+    # 계층 간 포함 관계(parent-child) 매핑
+    _build_hierarchy_links(levels)
 
     # 기존 포맷 호환: 기본 레벨의 membership/communities를 최상위에 유지
     result = {

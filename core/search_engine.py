@@ -115,6 +115,49 @@ def _parse_citations(answer: str, graph: dict) -> set[str]:
     return result
 
 
+def _select_hierarchy_level(query: str, graph: dict) -> int | None:
+    """질의 범위를 분석하여 적절한 커뮤니티 계층 레벨을 선택한다.
+
+    키워드 매칭으로 이름이 직접 언급된 엔티티 수를 세어 질의의 폭을 판단한다.
+    - 1~2개 직접 언급: 좁은 질의 → Level 2 (세분류)
+    - 3~5개 직접 언급: 중간 질의 → Level 1 (기본)
+    - 0개 또는 5개 초과: 넓은 질의 → Level 0 (대분류)
+
+    계층 데이터가 없으면 None을 반환하여 전체 리포트를 사용한다.
+    """
+    from pathlib import Path
+    import json
+
+    communities_path = Path(__file__).resolve().parent.parent / "data" / "output" / "communities.json"
+    if not communities_path.exists():
+        return None
+    with open(communities_path, encoding="utf-8") as f:
+        comm_data = json.load(f)
+    if "levels" not in comm_data:
+        return None
+
+    # 이름 직접 매칭만 사용 (임베딩 유사도 제외)
+    # concept 타입은 추상적이므로 범위 판단에서 제외 (인물, 단체, 사건, 장소만)
+    query_lower = query.lower()
+    direct_matches = 0
+    for node in graph["nodes"]:
+        if node.get("type") == "concept":
+            continue
+        name = node.get("name", "")
+        if not name or len(name) < 2:
+            continue
+        base_name = name.split("(")[0].strip()
+        if base_name and base_name in query_lower:
+            direct_matches += 1
+
+    if 1 <= direct_matches <= 2:
+        return 2  # 좁은 질의 → 세분류
+    elif 3 <= direct_matches <= 5:
+        return 1  # 중간 질의 → 기본
+    else:
+        return 0  # 넓은 질의 → 대분류
+
+
 def local_search(
     query: str,
     graph: dict,
@@ -188,7 +231,12 @@ def global_search(
     Returns:
         {"answer": str, "activated_communities": list[str]}
     """
-    reports = build_global_context()
+    # 질의 범위에 따라 계층 레벨 자동 선택
+    level = _select_hierarchy_level(query, graph) if graph else None
+    reports = build_global_context(level=level)
+    if not reports:
+        # 선택 레벨에 리포트가 없으면 전체로 폴백
+        reports = build_global_context()
     if not reports:
         return {
             "answer": "커뮤니티 리포트가 없습니다. generate_community_reports.py를 먼저 실행하세요.",

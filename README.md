@@ -12,10 +12,10 @@ GraphRAG 논문(Microsoft, "From Local to Global")의 파이프라인을 직접 
 | 논문 단계 | 구현 |
 |-----------|------|
 | LLM 기반 엔티티/관계 추출 | Claude Opus로 2-pass 추출 (기본 추출 → 누락 관계 재탐색) |
-| Leiden 커뮤니티 탐지 | igraph + leidenalg, 다중 해상도(0.3/1.0/2.5) 계층적 탐지 지원 |
+| Leiden 커뮤니티 탐지 | igraph + leidenalg, 다중 해상도(0.3/1.0/2.5) 계층적 탐지 + 포함 관계 매핑 |
 | LLM 커뮤니티 요약 | 커뮤니티별 노드/관계를 프롬프트에 주입하여 구조화된 리포트 생성 (title, summary, rating, findings) |
 | Local Search | 관련 엔티티 + 1-hop 이웃 + 커뮤니티 요약을 컨텍스트로 LLM에 전달 |
-| Global Search (Map-Reduce) | 커뮤니티 리포트를 청크 분할 → Map(핵심 포인트 추출) → 중요도 정렬 → Reduce(통합 답변) |
+| Global Search (Map-Reduce) | 질의 범위에 따라 계층 레벨 자동 선택 → 해당 레벨 리포트로 Map-Reduce |
 | DRIFT Search | 로컬에서 시작 → 후속 질문 자동 생성 → 점진적 컨텍스트 확장 → Reduce |
 | Claim 추출 | 엔티티별 역사적 주장/사실을 추출하고 검증 상태(TRUE/SUSPECTED/FALSE)를 부여 |
 
@@ -23,6 +23,7 @@ GraphRAG 논문(Microsoft, "From Local to Global")의 파이프라인을 직접 
 
 | 항목 | 논문 | 이 프로젝트 |
 |------|------|-------------|
+| 계층 레벨 선택 | 질의 범위에 따라 적절한 레벨의 리포트를 선택하되 구체적 방법은 명시하지 않음 | 질의에 직접 언급된 엔티티 수로 범위 판단 (1~2개→세분류, 3~5개→기본, 그 외→대분류) |
 | Text Unit 인덱스 | 원본 텍스트 청크를 엔티티/관계에 역매핑하여 검색 시 활용 | sourceContext(원본 발췌문)로 대체. 체계적 역매핑은 미구현 |
 | 엔티티 검색 방식 | text_unit 임베딩 → 관련 엔티티 역추적 | 노드 description 임베딩으로 직접 검색 + 키워드 부스트 |
 | Covariate 저장 | 엔티티 속성(날짜, 상태 등)을 별도 테이블로 관리 | 미구현. description 필드에 포함 |
